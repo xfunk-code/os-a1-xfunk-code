@@ -50,13 +50,13 @@ int main(int argc, char *argv[]){
 
     char filter = 0;
 
-    if(argc == 5){
+    if(argc >= 3 && argc < 6){
         if(strcmp(argv[3], "-type") == 0){
-            if(strcmp(argv[4], "d") == 0 || strcmp(argv[4], "f")) filter = argv[4][0];
-        } else {
-            fprintf(2, "usage: find <dir> <pattern> [-type f|d]\n");
-            exit(1);
+            if(strcmp(argv[4], "d") == 0 || strcmp(argv[4], "f") == 0) filter = argv[4][0];
         }
+    } else {
+        fprintf(2, "usage: find <dir> <pattern> [-type f|d]\n");
+        exit(1);
     }
 
     int dir = open(argv[1], O_RDONLY);
