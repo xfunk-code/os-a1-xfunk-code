@@ -14,21 +14,21 @@ void usage(){
 }
 
 void run(){
-  args[nargs] = 0;            // exec needs a 0 after the last argument
+  args[nargs] = 0;
   int pid = fork();
   if(pid < 0){
     fprintf(2, "xargs: fork failed\n");
     exit(1);
   }
-  if(pid == 0){               // child: become the command
+  if(pid == 0){
     exec(args[0], args);
-    fprintf(2, "xargs: exec %s failed\n", args[0]);  // only reached if exec fails
+    fprintf(2, "xargs: exec %s failed\n", args[0]);
     exit(1);
   }
-  int status;                 // parent: wait for the child
+  int status;
   wait(&status);
   if(status != 0) exit(1);
-  nargs = nfixed;             // drop the words, keep "cmd args..."
+  nargs = nfixed;
 }
 
 int main(int argc, char* argv[]){
