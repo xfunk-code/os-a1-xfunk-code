@@ -1,12 +1,34 @@
 #include "kernel/types.h"
 #include "kernel/param.h"
 #include "user/user.h"
+#define MAXWORD 128
 
-char* words[MAXARG][128];
+char words[MAXARG][MAXWORD];
+char* args[MAXARG + 1];
+int nfixed;
+int nargs;
 
 void usage(){
     fprintf(2, "usage: xargs [-n N] cmd [args...]\n");
     exit(1);
+}
+
+void run(){
+  args[nargs] = 0;            // exec needs a 0 after the last argument
+  int pid = fork();
+  if(pid < 0){
+    fprintf(2, "xargs: fork failed\n");
+    exit(1);
+  }
+  if(pid == 0){               // child: become the command
+    exec(args[0], args);
+    fprintf(2, "xargs: exec %s failed\n", args[0]);  // only reached if exec fails
+    exit(1);
+  }
+  int status;                 // parent: wait for the child
+  wait(&status);
+  if(status != 0) exit(1);
+  nargs = nfixed;             // drop the words, keep "cmd args..."
 }
 
 int main(int argc, char* argv[]){
@@ -22,18 +44,37 @@ int main(int argc, char* argv[]){
         if(n < 1) usage();
         i = 3;
     }
-    //if(i >= argc) usage();
+    if(i >= argc) usage();
 
-    int args = argc - i;
-    if(args >= MAXARG) usage();
+    nfixed = argc - i;
+    nargs = nfixed;
+    if(nargs >= MAXARG) usage();
+    for(int j=0; j<nargs; j++) args[j] = argv[j + i];
 
     char c;
-    read(0, &c, 1);
-    printf("%d\n", c);
-    read(0, &c, 1);
-    printf("%d\n", c);
-    read(0, &c, 1);
-    printf("%d\n", c);
+    int len = 0;
+    int more;
+    do {
+        more = read(0, &c, 1) == 1;
+        int sep = !more || c == ' ' || c == '\t' || c == '\n';
+
+        if(!sep){
+            if(len < MAXWORD - 1) words[nargs][len++] = c;
+            continue;
+        }
+
+        if(len > 0){
+            words[nargs][len] = 0;
+            args[nargs] = words[nargs];
+            nargs++;
+            len = 0;
+            if(n > 0 && nargs - nfixed == n) run();
+            else if(nargs == MAXARG) run();
+        }
+        if(n == 0 && more && c == '\n' && nargs > nfixed) run();
+    } while(more);
+
+    if(nargs > nfixed) run();
 
     exit(0);
 }
